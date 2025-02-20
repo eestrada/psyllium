@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'delegate'
 require 'timeout'
+require 'forwardable'
 require_relative 'psyllium/version'
 
 # Gem to make it easier to work with Fibers.
@@ -9,28 +9,45 @@ module Psyllium
   class Error < StandardError; end
   class IncompleteError < Error; end
 
+  # Wrap Exception instances for propagation
+  class ExceptionalCompletionError < Error
+    attr_reader :internal_exception
+
+    def initialize(expt)
+      @internal_exception = expt
+      super(internal_exception)
+    end
+
+    def to_s
+      internal_exception.to_s
+    end
+  end
+
   # Class that wraps a Fiber. Methods are delegated to Fiber when not found in Worker.
   class Husk
     include Timeout
     extend Forwardable
+
     def_delegator :@fiber, :alive?
     def_delegator :@fiber, :raise
 
-    # Start executing a Husk instance with the given block.
+    # Start executing a Husk instance with the given block. Returns the Husk
+    # instance as soon as the internal Fiber hits a potentially blocking
+    # operation (such as IO).
     #
-    # The block will only run if a Fiber scheduler has been set.
+    # The block will only run if a Fiber scheduler has previously been set.
     def initialize(&block)
       raise Error.new('No block given') unless block
 
-      @_is_complete = false
+      @mutex = Thread::Mutex.new
       @value = nil
       @exception = nil
       @fiber = Fiber.schedule do
-        @value = block.call
-        @_is_complete = true
-      rescue StandardError => e
-        @exception = e
-        @_is_complete = true
+        @mutex.synchronize do
+          @value = block.call
+        rescue StandardError => e
+          @exception = e
+        end
       end
     end
 
@@ -43,7 +60,7 @@ module Psyllium
     end
 
     def complete?
-      @_is_complete
+      !alive?
     end
 
     def value
@@ -56,10 +73,11 @@ module Psyllium
       @exception
     end
 
-    # Wait until execution completes.
+    # Wait until execution completes. Return the value of the executed block,
+    # if it completed successfully.
     #
     # Can be given a `wait_timeout` value, in which case execution will end
-    # early with a TimeoutError. By default, this will wait indefinitily for
+    # early with a TimeoutError. By default, this will wait indefinitely for
     # execution to complete.
     #
     # By default this will raise an exception if the Husk instance raised an
@@ -70,11 +88,8 @@ module Psyllium
     # `join` may be called more than once.
     def join(wait_timeout = nil, raise_exception: true)
       timeout(wait_timeout) do
-        loop do
-          # by sleeping, we force the Fiber scheduler to run.
-          sleep(0) while alive?
-
-          raise exception if raise_exception && exceptional_completion?
+        @mutex.synchronize do
+          raise ExceptionalCompletionError.new(exception) if raise_exception && exceptional_completion?
 
           value
         end
