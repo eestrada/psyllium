@@ -18,25 +18,24 @@ module Psyllium
   # A module meant to extend the builtin Fiber class to make it easier to use
   # in a more Thread-like manner.
   module Fiber
-    # Override Fiber initialization to possibly track value and exception.
-    def initialize(blocking: false, storage: true, &block)
+    # Override Fiber initialization to track value and exception, and to make
+    # Fiber joinable.
+    def initialize(**kwargs, &block)
       raise ArgumentError.new('No block given') unless block
 
-      if blocking
-        super
-      else
-        @mutex = Thread::Mutex.new
-        @started = false
-        @value = nil
-        @exception = nil
-        @joined = false
-        super do |*args|
-          @mutex.synchronize do
-            @started = true
-            @value = block.call(*args)
-          rescue StandardError => e
-            @exception = e
-          end
+      @mutex = Thread::Mutex.new
+      @started = false
+      @value = nil
+      @exception = nil
+      @joined = false
+      super do |*args|
+        @mutex.synchronize do
+          @started = true
+          @value = block.call(*args)
+        rescue StandardError => e
+          @exception = e
+        ensure
+          @joined = true
         end
       end
     end
@@ -53,10 +52,21 @@ module Psyllium
 
     # Mimic Thread `status` method.
     #
-    # `abort` status is never returned because Fiber does not have a state like
-    # this that is detectable or observable.
+    # `"run"` will only be returned if this method is called on
+    # `Fiber.current`.
     #
-    # `run` will only be returned if this is called on `Fiber.current`.
+    # `"sleep"` is returned for any Fiber that is `alive?`, but not
+    # `Fiber.current`.
+    #
+    # `nil` is returned if there was an exception.
+    #
+    # `false` is returned if the Fiber completed without exception.
+    #
+    # `"abort"` status is never returned because a Fiber does not have a state
+    # like this that is detectable or observable. If `kill` is called on a
+    # Fiber, the operation will happen immediately; there is not a point in
+    # time where `status` can be called between the call to `kill` and the
+    # point at which the Fiber is killed.
     def status
       if self == Fiber.current
         'run'
@@ -70,6 +80,8 @@ module Psyllium
     end
 
     # Mimic Thread `stop?` method.
+    #
+    # Return `true` if sleeping or completed.
     def stop?
       status != 'run'
     end
@@ -91,8 +103,7 @@ module Psyllium
         # calculation is done and we can return `self`, which is the Husk
         # instance.
         @mutex.synchronize do
-          @joined = true
-          self
+          return self
         end
       end
     rescue Timeout::Error
@@ -102,8 +113,12 @@ module Psyllium
   end
 end
 
-class ::Fiber
+class ::Fiber # rubocop:disable Style/Documentation
   # This must be prepended so that its implementation of `initialize` is called
   # first.
   prepend ::Psyllium::Fiber
+
+  # Thread has the same aliases
+  alias terminate kill
+  alias exit kill
 end
