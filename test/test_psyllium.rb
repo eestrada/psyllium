@@ -11,10 +11,10 @@ class TestPsyllium < Minitest::Test
     refute_nil ::Psyllium::Fiber
   end
 
-  def test_fiber_inherits_psyllium_fiber
-    afiber = ::Fiber.new do
+  def test_psyllium_fiber_inherits_psyllium_fiber_methods
+    afiber = ::Psyllium::Fiber.new do
       puts 'Hello world'
     end
-    assert_kind_of(::Psyllium::Fiber, afiber)
+    assert_kind_of(::Psyllium::FiberMethods, afiber)
   end
 end

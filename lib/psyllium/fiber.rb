@@ -17,7 +17,7 @@ module Psyllium
 
   # A module meant to extend the builtin Fiber class to make it easier to use
   # in a more Thread-like manner.
-  module Fiber
+  module FiberMethods
     # Override Fiber initialization to track value and exception, and to make
     # Fiber joinable.
     def initialize(**kwargs, &block)
@@ -68,7 +68,7 @@ module Psyllium
     # time where `status` can be called between the call to `kill` and the
     # point at which the Fiber is killed.
     def status
-      if self == Fiber.current
+      if self == ::Fiber.current
         'run'
       elsif alive?
         'sleep'
@@ -111,14 +111,23 @@ module Psyllium
       nil
     end
   end
-end
 
-class ::Fiber # rubocop:disable Style/Documentation
-  # This must be prepended so that its implementation of `initialize` is called
-  # first.
-  prepend ::Psyllium::Fiber
+  # Inherits from the builtin Fiber class, and adds additional functionality to
+  # make it behave more like a Thread.
+  class Fiber < ::Fiber
+    # This must be prepended so that its implementation of `initialize` is called
+    # first.
+    prepend ::Psyllium::FiberMethods
 
-  # Thread has the same aliases
-  alias terminate kill
-  alias exit kill
+    # Thread has the same aliases
+    alias terminate kill
+    alias exit kill
+  end
+
+  # TODO: figure out how to do this properly
+  # def self.patch_builtin_fiber!
+  #   return if ::Fiber.is_a?(FiberMethods)
+
+  #   ::Fiber.singleton_class.prepend(FiberMethods)
+  # end
 end
