@@ -58,7 +58,7 @@ module Psyllium
     # `"sleep"` is returned for any Fiber that is `alive?`, but not
     # `Fiber.current`.
     #
-    # `nil` is returned if there was an exception.
+    # `nil` is returned if the Fiber completed with an exception.
     #
     # `false` is returned if the Fiber completed without exception.
     #
@@ -100,7 +100,7 @@ module Psyllium
 
       Timeout.timeout(limit) do
         # Once this mutex finishes synchronizing, that means the initial
-        # calculation is done and we can return `self`, which is the Husk
+        # calculation is done and we can return `self`, which is the Fiber
         # instance.
         @mutex.synchronize do
           return self
