@@ -15,6 +15,15 @@ class TestPsyllium < Minitest::Test
     afiber = ::Psyllium::Fiber.new do
       puts 'Hello world'
     end
+
     assert_kind_of(::Psyllium::FiberMethods, afiber)
+  end
+
+  def test_builtin_fiber_does_not_inherit_psyllium_fiber_methods
+    afiber = ::Fiber.new do
+      puts 'Hello world'
+    end
+
+    refute_kind_of(::Psyllium::FiberMethods, afiber)
   end
 end
