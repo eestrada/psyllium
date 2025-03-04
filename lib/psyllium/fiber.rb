@@ -119,12 +119,12 @@ module Psyllium
     # first.
     prepend ::Psyllium::FiberMethods
 
-    # FIXME: code below does not work before Ruby 3.3. Add guard code to only
-    # include this if Ruby version is equal to or greater than this.
-
-    # # Thread has the same aliases
-    # alias terminate kill
-    # alias exit kill
+    # The `Fiber.kill` method only exists in later versions of Ruby.
+    if instance_methods.include?(:kill)
+      # Thread has the same aliases
+      alias terminate kill
+      alias exit kill
+    end
   end
 
   # TODO: figure out how to do this properly

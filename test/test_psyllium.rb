@@ -26,4 +26,21 @@ class TestPsyllium < Minitest::Test
 
     refute_kind_of(::Psyllium::FiberMethods, afiber)
   end
+
+  def test_kill_method_is_aliased
+    fiber_methods = ::Psyllium::Fiber.instance_methods
+
+    skip('kill method not present') unless fiber_methods.include?(:kill)
+
+    assert_includes(fiber_methods, :terminate)
+    assert_includes(fiber_methods, :exit)
+
+    kill_method = ::Psyllium::Fiber.instance_method(:kill)
+    terminate_method = ::Psyllium::Fiber.instance_method(:terminate)
+    exit_method = ::Psyllium::Fiber.instance_method(:exit)
+
+    # Check if these are aliases by checking equality of the unbound methods.
+    assert_equal(kill_method, terminate_method)
+    assert_equal(kill_method, exit_method)
+  end
 end
