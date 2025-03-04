@@ -119,9 +119,12 @@ module Psyllium
     # first.
     prepend ::Psyllium::FiberMethods
 
-    # Thread has the same aliases
-    alias terminate kill
-    alias exit kill
+    # FIXME: code below does not work before Ruby 3.3. Add guard code to only
+    # include this if Ruby version is equal to or greater than this.
+
+    # # Thread has the same aliases
+    # alias terminate kill
+    # alias exit kill
   end
 
   # TODO: figure out how to do this properly
