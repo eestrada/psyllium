@@ -7,7 +7,7 @@ module Psyllium
   class ExceptionalCompletionError < FiberError
     def initialize(expt)
       @internal_exception = expt
-      super(internal_exception)
+      super(@internal_exception)
     end
 
     def cause
@@ -95,7 +95,7 @@ module Psyllium
       raise FiberError.new('Cannot join self') if self == ::Fiber.current
       raise FiberError.new('Cannot join when calling Fiber is blocking') if ::Fiber.current.blocking?
       raise FiberError.new('Cannot join when called Fiber is blocking') if blocking?
-      raise FiberError.new('Cannot join without Fiber scheduler set') unless ::Fiber.current_scheduler
+      raise FiberError.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
       raise FiberError.new('Cannot join unstarted Fiber') unless @started
 
       Timeout.timeout(limit) do
@@ -125,6 +125,17 @@ module Psyllium
       alias terminate kill
       alias exit kill
     end
+
+    class << self
+      def schedule(&block)
+        raise ArgumentError.new('No block given') unless block
+
+        afiber = new(&block)
+
+        afiber.transfer if afiber.alive?
+        afiber
+      end
+    end
   end
 
   # TODO: figure out how to do this properly
@@ -133,4 +144,17 @@ module Psyllium
 
   #   ::Fiber.singleton_class.prepend(FiberMethods)
   # end
+end
+
+class ::Fiber # rubocop:disable Style/Documentation
+  # This must be prepended so that its implementation of `initialize` is called
+  # first.
+  prepend ::Psyllium::FiberMethods
+
+  # The `Fiber.kill` method only exists in later versions of Ruby.
+  if instance_methods.include?(:kill)
+    # Thread has the same aliases
+    alias terminate kill
+    alias exit kill
+  end
 end
