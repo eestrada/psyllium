@@ -10,6 +10,7 @@ gem 'rake', '~> 13.0'
 # Testing gems
 gem 'async', '~> 2.23'
 gem 'debug'
+gem 'fiber_scheduler'
 gem 'minitest', '~> 5.16'
 gem 'rack-test'
 gem 'rubocop', '~> 1.21'

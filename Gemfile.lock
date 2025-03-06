@@ -149,7 +149,7 @@ PLATFORMS
 DEPENDENCIES
   async (~> 2.23)
   debug
-  fiber_scheduler (~> 0.13.0)
+  fiber_scheduler
   minitest (~> 5.16)
   psyllium!
   rack-test

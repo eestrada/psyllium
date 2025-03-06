@@ -15,9 +15,20 @@ module Psyllium
     end
   end
 
+  # Meant to be used with `extend` on Fiber class.
+  module FiberClassMethods
+    def start(&block)
+      raise ArgumentError.new('No block given') unless block
+
+      fiber = new(blocking: false, &block)
+      fiber.resume
+      fiber
+    end
+  end
+
   # A module meant to extend the builtin Fiber class to make it easier to use
   # in a more Thread-like manner.
-  module FiberMethods
+  module FiberInstanceMethods
     # Override Fiber initialization to track value and exception, and to make
     # Fiber joinable.
     def initialize(**kwargs, &block)
@@ -115,26 +126,16 @@ module Psyllium
   # Inherits from the builtin Fiber class, and adds additional functionality to
   # make it behave more like a Thread.
   class Fiber < ::Fiber
+    extend ::Psyllium::FiberClassMethods
     # This must be prepended so that its implementation of `initialize` is called
     # first.
-    prepend ::Psyllium::FiberMethods
+    prepend ::Psyllium::FiberInstanceMethods
 
     # The `Fiber.kill` method only exists in later versions of Ruby.
     if instance_methods.include?(:kill)
       # Thread has the same aliases
       alias terminate kill
       alias exit kill
-    end
-
-    class << self
-      def schedule(&block)
-        raise ArgumentError.new('No block given') unless block
-
-        afiber = new(&block)
-
-        afiber.transfer if afiber.alive?
-        afiber
-      end
     end
   end
 
@@ -147,9 +148,10 @@ module Psyllium
 end
 
 class ::Fiber # rubocop:disable Style/Documentation
+  extend ::Psyllium::FiberClassMethods
   # This must be prepended so that its implementation of `initialize` is called
   # first.
-  prepend ::Psyllium::FiberMethods
+  prepend ::Psyllium::FiberInstanceMethods
 
   # The `Fiber.kill` method only exists in later versions of Ruby.
   if instance_methods.include?(:kill)
