@@ -51,31 +51,36 @@ class TestPsyllium < Minitest::Test
   end
 
   def test_join_works
-    Async do
-      afiber = ::Fiber.start do
-        sleep(1)
-        # puts 'hello'
-        # puts 'world'
-        3
+    reactors = [
+      Kernel.method('Async'),
+
+      # FIXME: FiberScheduler does not work with this test currently
+      # Kernel.method('FiberScheduler'),
+    ]
+
+    reactors.each do |reactor|
+      reactor.call do
+        afiber = ::Fiber.start do
+          sleep(0.1)
+          3
+        end
+        bfiber = ::Fiber.start do
+          sleep(0.1)
+          4
+        end
+
+        a_end_value = afiber.value
+        b_end_value = bfiber.value
+
+        assert_equal(3, a_end_value)
+
+        assert_equal(4, b_end_value)
+
+        assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
+
+        # Join should return the fiber instance
+        assert_equal(afiber, afiber.join)
       end
-      bfiber = ::Fiber.start do
-        sleep(1)
-        # puts 'hello'
-        # puts 'world'
-        4
-      end
-
-      # FIXME: These are joining one after the other, instead of concurrently.
-      afiber.join
-      bfiber.join
-      a_end_value = afiber.value
-      b_end_value = bfiber.value
-
-      assert_equal(3, a_end_value)
-
-      assert_equal(4, b_end_value)
-
-      assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
     end
   end
 end

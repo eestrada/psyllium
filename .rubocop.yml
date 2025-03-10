@@ -15,6 +15,9 @@ Style/TrailingCommaInArguments:
 Style/TrailingCommaInHashLiteral:
   Enabled: false
 
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+
 Style/RaiseArgs:
   Enabled: false
 
