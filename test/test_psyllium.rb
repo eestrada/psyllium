@@ -59,13 +59,14 @@ class TestPsyllium < Minitest::Test
     ]
 
     reactors.each do |reactor|
+      outer_limit = 0.1
       reactor.call do
-        afiber = ::Fiber.start do
-          sleep(0.1)
+        afiber = ::Fiber.start(outer_limit) do |inner_limit|
+          sleep(inner_limit)
           3
         end
         bfiber = ::Fiber.start do
-          sleep(0.1)
+          sleep(outer_limit)
           4
         end
 

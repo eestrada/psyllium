@@ -41,14 +41,14 @@ module Psyllium
     #
     # 3. The `start` method is also available on the `Thread` class, so this
     # makes it easy to change out one for the other.
-    def start(&block)
+    def start(*args, &block)
       raise ArgumentError.new('No block given') unless block
 
       Fiber.schedule do
         state = state_get(create_missing: true)
         state.mutex.synchronize do
           state.started = true
-          state.value = block.call
+          state.value = block.call(*args)
         rescue StandardError => e
           state.exception = e
         ensure
