@@ -1,28 +1,121 @@
-# Psyllium
+# Psyllium: Makes using Ruby Fibers easier
 
-TODO: Delete this and the text below, and describe your gem
+> Psyllium \| SIL-ee-um \|
+>
+> 1. _Dietary_ the seed of a fleawort (especially Plantago psyllium). Mainly
+>    used as a supplement to improve dietary fiber consumption.
+> 2. _Programming_ a Ruby gem to improve the experience of using Ruby Fiber
+>    primitives.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/psyllium`. To experiment with that code, run `bin/console` for an interactive prompt.
+## What is Psyllium?
+
+Psyllium is a library to make it easier to use Ruby Fibers for everyday
+programming.
+
+Ruby version 3 introduced the Fiber Scheduler interface, which makes it easier
+to use Fibers for concurrent programming. However, native Thread objects still
+have several useful methods that Fibers do not have.
+
+The Psyllium library adds many of these methods to the builtin Fiber class such
+as `start`, `join`, `value`, and others to make it easier to replace Thread
+usage with Fiber usage, or to mix and match Thread and Fiber usage without
+concern for which concurrency primitive is being used.
+
+Assuming that a Fiber Scheduler is set, Psyllium Fibers can be used in ways
+similar to Threads, with a similar interface, and with the added benefit of
+much lower memory usage compared to native Threads.
+
+## Why Psyllium?
+
+Psyllium makes it easier to use auto-scheduled fibers and to block on their
+execution.
+
+Before Psyllium, the Fiber interface seemed to be centered around two types of
+usage: it was assumed that Fibers would be used in one of two ways:
+
+1. (Before Ruby 3) Explicitly and manually manipulated using `Fiber.resume`,
+   `Fiber.yield`, and `Fiber.alive?`.
+2. (After Ruby 3) Fired off and forgotten about. In essence, left to the
+   scheduler to deal with. If you want a final value back you must use some
+   separate mechanism to track and retrieve it.
+
+With Psyllium, it is possible to call `join` on a Fiber, just like a Thread.
+Assuming other Fibers are simultaneously scheduled, they will continue
+executing concurrently until the Fiber in question finishes joining.
+
+It is also possible to call `value` to retrieve the final value (or exception)
+returned from the block given to `Fiber.start`, in the exact same way as a
+Thread. And just like with a Thread, calling `value` will first implicitly
+`join` the Fiber. It is also possible to give a timeout limit when calling
+`join` on a Fiber, just like with a Thread.
+
+By using Fibers in this way, instead of Threads, memory usage can be
+significantly reduced. Potentially thousands of Fibers can be spawned and
+joined at a fraction of the memory cost of native Threads.
+
+If your Ruby application directly manipulates Threads or Thread pools, and
+those Threads spend most (or all) of their time just waiting on IO, then
+consider trying Psyllium enhanced Fibers instead of Threads.
+
+## Why _not_ Psyllium?
+
+Circumstances where you shouldn't use Psyllium (or Fibers generally):
+
+1. Your application is compute heavy. It uses Threads that call out to FFI code
+   and release the GVL when doing so (i.e. truly parallel code execution).
+2. If you don't have concurrent code at all (i.e. the code must run serially).
 
 ## Installation
-
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
 
 Install the gem and add to the application's Gemfile by executing:
 
 ```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+bundle add psyllium
 ```
 
 If bundler is not being used to manage dependencies, install the gem by executing:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+gem install psyllium
 ```
 
 ## Usage
 
-TODO: Write usage instructions here
+Instead of doing the following in your code:
+
+```ruby
+thread1 = Thread.start { long_running_io_operation_with_result1() }
+thread2 = Thread.start { long_running_io_operation_with_result2() }
+
+thread1.join
+thread2.join
+
+# `value` implicitly calls `join`, so the explicit `join` calls above are
+# not strictly necessary.
+value1 = thread1.value
+value2 = thread2.value
+```
+
+You can now do this:
+
+```ruby
+# Adds new methods to Fiber
+require 'psyllium'
+
+# Calls to `Fiber.start` will fail if no scheduler is set beforehand.
+Fiber.set_scheduler(SomeSchedulerImplementation.new)
+
+fiber1 = Fiber.start { long_running_io_operation_with_result1() }
+fiber2 = Fiber.start { long_running_io_operation_with_result2() }
+
+fiber1.join
+fiber2.join
+
+# `value` implicitly calls `join`, so the explicit `join` calls above are
+# not strictly necessary.
+value1 = fiber1.value
+value2 = fiber2.value
+```
 
 ## Development
 
