@@ -63,6 +63,9 @@ module Psyllium
       #
       # A `WeakKeyMap` is used so that when a Fiber is garbage collected, the
       # associated Psyllium::State will be garbage collected as well.
+
+      # FIXME: WeakKeyMap does not exist in versions prior to Ruby 3.3.
+      # Currently the Fiber scheduler is swallowing the errors this indicate this.
       state = Thread.current.thread_variable_get(:psyllium_state) || Thread.current.thread_variable_set(
         :psyllium_state, ObjectSpace::WeakKeyMap.new
       )
