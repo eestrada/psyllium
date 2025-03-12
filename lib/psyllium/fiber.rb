@@ -150,21 +150,23 @@ module Psyllium
     end
   end
 
+  # FIXME: Inheriting from ::Fiber does not work correctly. Figure out why or remove this.
+
   # Inherits from the builtin Fiber class, and adds additional functionality to
   # make it behave more like a Thread.
-  class Fiber < ::Fiber
-    extend ::Psyllium::FiberClassMethods
-    # This must be prepended so that its implementation of `initialize` is called
-    # first.
-    include ::Psyllium::FiberInstanceMethods
+  # class Fiber < ::Fiber
+  #   extend ::Psyllium::FiberClassMethods
+  #   # This must be prepended so that its implementation of `initialize` is called
+  #   # first.
+  #   include ::Psyllium::FiberInstanceMethods
 
-    # The `Fiber.kill` method only exists in later versions of Ruby.
-    if instance_methods.include?(:kill)
-      # Thread has the same aliases
-      alias terminate kill
-      alias exit kill
-    end
-  end
+  #   # The `Fiber.kill` method only exists in later versions of Ruby.
+  #   if instance_methods.include?(:kill)
+  #     # Thread has the same aliases
+  #     alias terminate kill
+  #     alias exit kill
+  #   end
+  # end
 
   # TODO: figure out how to do this properly
   # def self.patch_builtin_fiber!

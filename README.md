@@ -1,5 +1,8 @@
 # Psyllium: Makes using Ruby Fibers easier
 
+[![Gem Version](https://badge.fury.io/rb/psyllium.svg?icon=si%3Arubygems)](https://badge.fury.io/rb/psyllium)
+[![Main GH Actions workflow](https://github.com/eestrada/psyllium/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/eestrada/psyllium/actions/workflows/main.yml?query=branch%3Amaster)
+
 > Psyllium \| SIL-ee-um \|
 >
 > 1. _Dietary_ the seed of a fleawort (especially Plantago psyllium). Mainly
@@ -12,8 +15,8 @@
 Psyllium is a library to make it easier to use Ruby Fibers for everyday
 programming.
 
-Ruby version 3 introduced the Fiber Scheduler interface, which makes it easier
-to use Fibers for concurrent programming. However, native Thread objects still
+Ruby 3.0 introduced the Fiber Scheduler interface, making it easier to
+use Fibers for concurrent programming. However, native Thread objects still
 have several useful methods that Fibers do not have.
 
 The Psyllium library adds many of these methods to the builtin Fiber class such
@@ -27,14 +30,13 @@ much lower memory usage compared to native Threads.
 
 ## Why Psyllium?
 
-Psyllium makes it easier to use auto-scheduled fibers and to block on their
-execution.
+Psyllium makes it easier to use auto-scheduled fibers, block on their
+execution, and retrieve their final values.
 
-Before Psyllium, the Fiber interface seemed to be centered around two types of
-usage: it was assumed that Fibers would be used in one of two ways:
+By default, the Fiber interface centers around two types of usage:
 
-1. (Before Ruby 3) Explicitly and manually manipulated using `Fiber.resume`,
-   `Fiber.yield`, and `Fiber.alive?`.
+1. (Before Ruby 3) Explicitly and manually manipulated using `Fiber.yield`,
+   `resume`, and `alive?`.
 2. (After Ruby 3) Fired off and forgotten about. In essence, left to the
    scheduler to deal with. If you want a final value back you must use some
    separate mechanism to track and retrieve it.
@@ -54,8 +56,8 @@ significantly reduced. Potentially thousands of Fibers can be spawned and
 joined at a fraction of the memory cost of native Threads.
 
 If your Ruby application directly manipulates Threads or Thread pools, and
-those Threads spend most (or all) of their time just waiting on IO, then
-consider trying Psyllium enhanced Fibers instead of Threads.
+those Threads spend most (or all) of their time waiting on IO, then consider
+using Psyllium enhanced Fibers instead of Threads.
 
 ## Why _not_ Psyllium?
 
@@ -90,10 +92,13 @@ thread2 = Thread.start { long_running_io_operation_with_result2() }
 thread1.join
 thread2.join
 
+puts 'thread1 ended with an exception' if thread1.status.nil?
+puts 'thread2 ended without an exception' if thread2.status == false
+
 # `value` implicitly calls `join`, so the explicit `join` calls above are
 # not strictly necessary.
-value1 = thread1.value
-value2 = thread2.value
+result1 = thread1.value
+result2 = thread2.value
 ```
 
 You can now do this:
@@ -111,10 +116,13 @@ fiber2 = Fiber.start { long_running_io_operation_with_result2() }
 fiber1.join
 fiber2.join
 
+puts 'fiber1 ended with an exception' if fiber1.status.nil?
+puts 'fiber2 ended without an exception' if fiber2.status == false
+
 # `value` implicitly calls `join`, so the explicit `join` calls above are
 # not strictly necessary.
-value1 = fiber1.value
-value2 = fiber2.value
+result1 = fiber1.value
+result2 = fiber2.value
 ```
 
 ## Development
