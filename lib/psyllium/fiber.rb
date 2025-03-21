@@ -3,8 +3,11 @@
 require 'timeout'
 
 module Psyllium
+  # Base Exception class for module code.
+  class Error < FiberError; end
+
   # Wrap Exception instances for propagation
-  class ExceptionalCompletionError < FiberError
+  class ExceptionalCompletionError < Error
     def initialize(expt)
       @internal_exception = expt
       super(@internal_exception)
@@ -59,13 +62,10 @@ module Psyllium
 
     def state_get(fiber: Fiber.current, create_missing: false)
       # Psyllium state is a thread local variable because Fibers cannot (yet)
-      # migrates across threads anyway.
+      # migrate across threads anyway.
       #
       # A `WeakKeyMap` is used so that when a Fiber is garbage collected, the
       # associated Psyllium::State will be garbage collected as well.
-
-      # FIXME: WeakKeyMap does not exist in versions prior to Ruby 3.3.
-      # Currently the Fiber scheduler is swallowing the errors this indicate this.
       state = Thread.current.thread_variable_get(:psyllium_state) || Thread.current.thread_variable_set(
         :psyllium_state, ObjectSpace::WeakKeyMap.new
       )
@@ -128,11 +128,11 @@ module Psyllium
     # `join` may be called more than once.
     def join(limit = nil) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/AbcSize
       return self if state.joined
-      raise FiberError.new('Cannot join self') if eql?(::Fiber.current)
-      raise FiberError.new('Cannot join when calling Fiber is blocking') if ::Fiber.current.blocking?
-      raise FiberError.new('Cannot join when called Fiber is blocking') if blocking?
-      raise FiberError.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
-      raise FiberError.new('Cannot join unstarted Fiber') unless state.started
+      raise Error.new('Cannot join self') if eql?(::Fiber.current)
+      raise Error.new('Cannot join when calling Fiber is blocking') if ::Fiber.current.blocking?
+      raise Error.new('Cannot join when called Fiber is blocking') if blocking?
+      raise Error.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
+      raise Error.new('Cannot join unstarted Fiber') unless state.started
 
       # Once this mutex finishes synchronizing, that means the initial
       # calculation is done and we can return `self`, which is the Fiber
@@ -152,43 +152,13 @@ module Psyllium
       fiber_state
     end
   end
-
-  # FIXME: Inheriting from ::Fiber does not work correctly. Figure out why or remove this.
-
-  # Inherits from the builtin Fiber class, and adds additional functionality to
-  # make it behave more like a Thread.
-  # class Fiber < ::Fiber
-  #   extend ::Psyllium::FiberClassMethods
-  #   # This must be prepended so that its implementation of `initialize` is called
-  #   # first.
-  #   include ::Psyllium::FiberInstanceMethods
-
-  #   # The `Fiber.kill` method only exists in later versions of Ruby.
-  #   if instance_methods.include?(:kill)
-  #     # Thread has the same aliases
-  #     alias terminate kill
-  #     alias exit kill
-  #   end
-  # end
-
-  # TODO: figure out how to do this properly
-  # def self.patch_builtin_fiber!
-  #   return if ::Fiber.is_a?(FiberMethods)
-
-  #   ::Fiber.singleton_class.prepend(FiberMethods)
-  # end
 end
 
 class ::Fiber # rubocop:disable Style/Documentation
   extend ::Psyllium::FiberClassMethods
-  # This must be prepended so that its implementation of `initialize` is called
-  # first.
   include ::Psyllium::FiberInstanceMethods
 
-  # The `Fiber.kill` method only exists in later versions of Ruby.
-  if instance_methods.include?(:kill)
-    # Thread has the same aliases
-    alias terminate kill
-    alias exit kill
-  end
+  # Thread has the same aliases
+  alias terminate kill
+  alias exit kill
 end

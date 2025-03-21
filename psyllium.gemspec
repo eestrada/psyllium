@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   # spec.description = 'TODO: Write a longer description or delete this line.'
   spec.homepage = 'https://github.com/eestrada/psyllium'
   spec.license = '0BSD'
-  spec.required_ruby_version = '>= 3.1.0'
+  spec.required_ruby_version = '>= 3.3.0'
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org/'
 

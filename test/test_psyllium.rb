@@ -9,22 +9,6 @@ class TestPsyllium < Minitest::Test
     refute_nil ::Psyllium::VERSION
   end
 
-  def test_that_it_has_a_fiber_module
-    skip('Inheriting from ::Fiber does not seem to work')
-
-    refute_nil ::Psyllium::Fiber
-  end
-
-  def test_psyllium_fiber_inherits_psyllium_fiber_methods
-    skip('Inheriting from ::Fiber does not seem to work')
-
-    afiber = ::Psyllium::Fiber.new do
-      puts 'Hello world'
-    end
-
-    assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
-  end
-
   def test_builtin_fiber_inherits_psyllium_fiber_methods
     afiber = ::Fiber.new do
       puts 'Hello world'
@@ -37,10 +21,30 @@ class TestPsyllium < Minitest::Test
     assert_kind_of(::Psyllium::FiberClassMethods, ::Fiber)
   end
 
+  def test_fiber_join_only_works_on_psyllium_fibers
+    afiber = Fiber.new do
+      Fiber.yield
+    end
+
+    afiber.resume
+
+    exc = assert_raises(Psyllium::Error) { afiber.join }
+    assert_match('No Psyllium state for this fiber', exc.message)
+  end
+
+  def test_fiber_cannot_join_self
+    Async do
+      Fiber.start do
+        exc = assert_raises(Psyllium::Error) do
+          Fiber.current.join
+        end
+        assert_match('Cannot join self', exc.message)
+      end
+    end
+  end
+
   def test_kill_method_is_aliased
     fiber_methods = ::Fiber.instance_methods
-
-    skip('kill method not present') unless fiber_methods.include?(:kill)
 
     assert_includes(fiber_methods, :terminate)
     assert_includes(fiber_methods, :exit)
