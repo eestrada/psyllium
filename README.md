@@ -12,26 +12,12 @@
 
 ## What is Psyllium?
 
-Psyllium is a library to make it easier to use Ruby Fibers for everyday
-programming.
+Psyllium is a library to make it easier to use auto-scheduled Ruby Fibers,
+block on their execution, and retrieve their final values.
 
 Ruby 3.0 introduced the Fiber Scheduler interface, making it easier to
 use Fibers for concurrent programming. However, native Thread objects still
 have several useful methods that Fibers do not have.
-
-The Psyllium library adds many of these methods to the builtin Fiber class such
-as `start`, `join`, `value`, and others to make it easier to replace Thread
-usage with Fiber usage, or to mix and match Thread and Fiber usage without
-concern for which concurrency primitive is being used.
-
-Assuming that a Fiber Scheduler is set, Psyllium Fibers can be used in ways
-similar to Threads, with a similar interface, and with the added benefit of
-much lower memory usage compared to native Threads.
-
-## Why Psyllium?
-
-Psyllium makes it easier to use auto-scheduled fibers, block on their
-execution, and retrieve their final values.
 
 By default, the Fiber interface centers around two types of usage:
 
@@ -41,25 +27,38 @@ By default, the Fiber interface centers around two types of usage:
    scheduler to deal with. If you want a final value back you must use some
    separate mechanism to track and retrieve it.
 
-With Psyllium, it is possible to call `join` on a Fiber, just like a Thread.
-Assuming other Fibers are simultaneously scheduled, they will continue
-executing concurrently until the Fiber in question finishes joining.
+Psyllium adds many of the methods of the Thread class to the builtin Fiber
+class, including `start`, `join`, and `value`. This makes it easier to replace
+Thread usage with Fiber usage, or to mix and match Thread and Fiber usage
+without concern for which concurrency primitive is being used.
 
-It is also possible to call `value` to retrieve the final value (or exception)
-returned from the block given to `Fiber.start`, in the exact same way as a
-Thread. And just like with a Thread, calling `value` will first implicitly
-`join` the Fiber. It is also possible to give a timeout limit when calling
-`join` on a Fiber, just like with a Thread.
+Assuming that a Fiber Scheduler is set, Psyllium Fibers can be used in ways
+similar to Threads, with a similar interface, and with the added benefit of
+much lower memory usage compared to native Threads.
 
-By using Fibers in this way, instead of Threads, memory usage can be
-significantly reduced. Potentially thousands of Fibers can be spawned and
-joined at a fraction of the memory cost of native Threads.
+## When to use Psyllium?
 
 If your Ruby application directly manipulates Threads or Thread pools, and
 those Threads spend most (or all) of their time waiting on IO, then consider
 using Psyllium enhanced Fibers instead of Threads.
 
-## Why _not_ Psyllium?
+Let's imagine a scenario where Psyllium (or Fibers generally) could be useful:
+
+- You have 100 URLs that you need to retrieve values from. Each URL has 1
+  second of network latency. Here are some solutions with memory and speed
+  tradeoffs:
+  - Solution 1: synchronously and serially retrieve values in a loop. You
+    receive all 100 responses in 100 seconds using no additional memory.
+  - Solution 2: use a thread pool of 10 threads. You receive all 100 responses
+    in 10 seconds using 10MB of additional memory (~1MB additional memory per
+    Thread).
+  - Solution 3: use one thread per URL. You receive all 100 responses in 1
+    second using 100MB of additional memory (~1MB additional memory per Thread).
+  - Solution 4: use one auto-fiber per URL. You receive all 100 responses in 1
+    second using 1.3MB of additional memory ([~13KB of physical memory
+    per Fiber](https://bugs.ruby-lang.org/issues/15997)).
+
+## When _not_ to use Psyllium?
 
 Circumstances where you shouldn't use Psyllium (or Fibers generally):
 
