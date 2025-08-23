@@ -2,6 +2,7 @@
 
 [![Gem Version](https://badge.fury.io/rb/psyllium.svg?icon=si%3Arubygems)](https://badge.fury.io/rb/psyllium)
 [![Main GH Actions workflow](https://github.com/eestrada/psyllium/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/eestrada/psyllium/actions/workflows/main.yml?query=branch%3Amaster)
+[![codecov](https://codecov.io/gh/eestrada/psyllium/branch/master/graph/badge.svg?token=3AFR8HYPTG)](https://codecov.io/gh/eestrada/psyllium)
 
 > Psyllium \| SIL-ee-um \|
 >
