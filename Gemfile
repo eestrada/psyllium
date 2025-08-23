@@ -16,7 +16,8 @@ gem 'rack-test'
 gem 'rubocop', '~> 1.21'
 gem 'rubocop-minitest', '~> 0.37.1'
 gem 'rubocop-rake', '~> 0.7.1'
-gem 'simplecov'
+gem 'simplecov', require: false
+gem 'simplecov-cobertura', require: false
 
 # dev gems
 gem 'ruby-lsp', require: false
