@@ -5,6 +5,17 @@ require 'minitest/benchmark'
 require_relative 'test_helper'
 
 class BenchPsyllium < Minitest::Benchmark
+  def setup
+    super
+    scheduler = Async::Scheduler.new
+    Fiber.set_scheduler(scheduler)
+  end
+
+  def teardown
+    super
+    Fiber.set_scheduler(nil)
+  end
+
   # At its peak, `n` for this benchmark is equal to 10000. Each Fiber created
   # sleeps for 0.1 seconds, so if this scaled linearly it would take 1000
   # seconds. In reality, this takes less than 1 second to join 10000 Fibers.
@@ -13,7 +24,8 @@ class BenchPsyllium < Minitest::Benchmark
   # example, allocating memory for Fiber instances takes time, even though this
   # is unrelated to the actual sleep time.
   def bench_joining_multiple_fibers_is_roughly_big_o_constant
-    Async do
+    # Need to run this under a non-blocking Fiber, otherwise joining won't work.
+    Fiber.schedule do
       assert_performance_constant(0.9999) do |n|
         sleep_time = 0.1
         fibers = n.times.map { Fiber.start { sleep(sleep_time) } }

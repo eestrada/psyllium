@@ -1,10 +1,20 @@
 # frozen_string_literal: true
 
 require 'async'
-require 'fiber_scheduler'
 require_relative 'test_helper'
 
 class TestPsyllium < Minitest::Test
+  def setup
+    super
+    scheduler = Async::Scheduler.new
+    Fiber.set_scheduler(scheduler)
+  end
+
+  def teardown
+    super
+    Fiber.set_scheduler(nil)
+  end
+
   def test_that_it_has_a_version_number
     refute_nil ::Psyllium::VERSION
   end
@@ -33,13 +43,11 @@ class TestPsyllium < Minitest::Test
   end
 
   def test_fiber_cannot_join_self
-    Async do
-      Fiber.start do
-        exc = assert_raises(Psyllium::Error) do
-          Fiber.current.join
-        end
-        assert_match('Cannot join self', exc.message)
+    Fiber.start do
+      exc = assert_raises(Psyllium::Error) do
+        Fiber.current.join
       end
+      assert_match('Cannot join self', exc.message)
     end
   end
 
@@ -59,37 +67,29 @@ class TestPsyllium < Minitest::Test
   end
 
   def test_join_works
-    reactors = [
-      Kernel.method('Async'),
-
-      # FIXME: FiberScheduler does not work with this test currently
-      # Kernel.method('FiberScheduler'),
-    ]
-
-    reactors.each do |reactor|
+    # Need to run this under a non-blocking Fiber, otherwise joining won't work.
+    Fiber.schedule do
       outer_limit = 0.1
-      reactor.call do
-        afiber = ::Fiber.start(outer_limit) do |inner_limit|
-          sleep(inner_limit)
-          3
-        end
-        bfiber = ::Fiber.start do
-          sleep(outer_limit)
-          4
-        end
-
-        a_end_value = afiber.value
-        b_end_value = bfiber.value
-
-        assert_equal(3, a_end_value)
-
-        assert_equal(4, b_end_value)
-
-        assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
-
-        # Join should return the fiber instance
-        assert_equal(afiber, afiber.join)
+      afiber = ::Fiber.start(outer_limit) do |inner_limit|
+        sleep(inner_limit)
+        3
       end
+      bfiber = ::Fiber.start do
+        sleep(outer_limit)
+        4
+      end
+
+      a_end_value = afiber.value
+      b_end_value = bfiber.value
+
+      assert_equal(3, a_end_value)
+
+      assert_equal(4, b_end_value)
+
+      assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
+
+      # Join should return the fiber instance
+      assert_equal(afiber, afiber.join)
     end
   end
 end
