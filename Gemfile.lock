@@ -25,6 +25,7 @@ GEM
       reline (>= 0.3.8)
     diff-lcs (1.6.2)
     docile (1.4.1)
+    drb (2.2.3)
     erb (6.0.2)
     fiber-annotation (0.2.0)
     fiber-local (1.1.0)
@@ -48,7 +49,9 @@ GEM
     logger (1.7.0)
     metrics (0.15.0)
     mini_portile2 (2.8.9)
-    minitest (5.27.0)
+    minitest (6.0.4)
+      drb (~> 2.0)
+      prism (~> 1.5)
     nokogiri (1.19.2)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
@@ -163,7 +166,7 @@ PLATFORMS
 DEPENDENCIES
   async (~> 2.23)
   debug
-  minitest (~> 5.16)
+  minitest
   psyllium!
   rake (~> 13.0)
   rubocop (~> 1.21)

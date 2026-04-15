@@ -10,7 +10,7 @@ gem 'rake', '~> 13.0'
 # Testing gems
 gem 'async', '~> 2.23'
 gem 'debug'
-gem 'minitest', '~> 5.16'
+gem 'minitest'
 gem 'rubocop', '~> 1.21'
 gem 'rubocop-minitest', '~> 0.37.1'
 gem 'rubocop-rake', '~> 0.7.1'
