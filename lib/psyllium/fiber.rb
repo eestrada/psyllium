@@ -154,7 +154,7 @@ module Psyllium
   end
 end
 
-class ::Fiber # rubocop:disable Style/Documentation
+class ::Fiber # rubocop:disable Style/Documentation,Style/OneClassPerFile
   extend ::Psyllium::FiberClassMethods
   include ::Psyllium::FiberInstanceMethods
 
