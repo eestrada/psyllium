@@ -110,19 +110,25 @@ require 'psyllium'
 # Calls to `Fiber.start` will fail if no scheduler is set beforehand.
 Fiber.set_scheduler(SomeSchedulerImplementation.new)
 
-fiber1 = Fiber.start { long_running_io_operation_with_result1() }
-fiber2 = Fiber.start { long_running_io_operation_with_result2() }
+# `Fiber.start` must be called inside a non-blocking Fiber.
+# Thus we call this inside `Fiber.schedule`.
+# If you use a Fiber based web server like Falcon,
+# then all your code already runs in a non-blocking Fiber.
+Fiber.schedule do
+  fiber1 = Fiber.start { long_running_io_operation_with_result1() }
+  fiber2 = Fiber.start { long_running_io_operation_with_result2() }
 
-fiber1.join
-fiber2.join
+  fiber1.join
+  fiber2.join
 
-puts 'fiber1 ended with an exception' if fiber1.status.nil?
-puts 'fiber2 ended without an exception' if fiber2.status == false
+  puts 'fiber1 ended with an exception' if fiber1.status.nil?
+  puts 'fiber2 ended without an exception' if fiber2.status == false
 
-# `value` implicitly calls `join`, so the explicit `join` calls above are
-# not strictly necessary.
-result1 = fiber1.value
-result2 = fiber2.value
+  # `value` implicitly calls `join`, so the explicit `join` calls above are
+  # not strictly necessary.
+  result1 = fiber1.value
+  result2 = fiber2.value
+end
 ```
 
 ## Development
