@@ -201,4 +201,21 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
       assert_equal(fiber1, fiber1.join)
     end
   end
+
+  def test_timeout_works
+    # Need to run this under a non-blocking Fiber, otherwise joining won't work.
+    Fiber.schedule do
+      fiber1 = ::Fiber.start do
+        sleep(0.1)
+      end
+
+      timeout_value1 = fiber1.join(0.05)
+
+      assert_nil(timeout_value1)
+
+      timeout_value2 = fiber1.join(0.15)
+
+      refute_nil(timeout_value2)
+    end
+  end
 end
