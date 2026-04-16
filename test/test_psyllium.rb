@@ -72,6 +72,13 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     assert_equal(kill_method, exit_method)
   end
 
+  def test_start_without_block
+    Fiber.schedule do
+      err = assert_raises(ArgumentError) { Fiber.start }
+      assert_equal('No block given', err.message)
+    end
+  end
+
   def test_status_exceptional_completion
     Fiber.schedule do
       fiber1 = ::Fiber.start do
