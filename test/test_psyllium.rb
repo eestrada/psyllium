@@ -5,7 +5,10 @@ require_relative 'minitest_helper'
 require 'async'
 require_relative '../lib/psyllium'
 
-class TestPsyllium < Minitest::Test
+class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
+  class TestException < StandardError
+  end
+
   def setup
     super
     @scheduler = Async::Scheduler.new
@@ -67,6 +70,24 @@ class TestPsyllium < Minitest::Test
     # Check if these are aliases by checking equality of the unbound methods.
     assert_equal(kill_method, terminate_method)
     assert_equal(kill_method, exit_method)
+  end
+
+  def test_status_exceptional_completion
+    Fiber.schedule do
+      fiber1 = ::Fiber.start do
+        # FIXME: if a Psyllium fiber doesn't have a blocking operation like
+        # `sleep`, then the start method runs the proc to completion and
+        # returns nil. It should always return a fiber, even if it has already
+        # completed its run.
+        sleep(0.01)
+        raise TestException.new('Any exception')
+      end
+
+      fiber1.join
+
+      err = assert_raises(Psyllium::ExceptionalCompletionError) { fiber1.value }
+      assert_instance_of(TestException, err.cause)
+    end
   end
 
   def test_status_run
