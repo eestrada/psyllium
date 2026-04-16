@@ -23,11 +23,11 @@ class TestPsyllium < Minitest::Test
   end
 
   def test_builtin_fiber_inherits_psyllium_fiber_methods
-    afiber = ::Fiber.new do
+    fiber1 = ::Fiber.new do
       puts 'Hello world'
     end
 
-    assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
+    assert_kind_of(::Psyllium::FiberInstanceMethods, fiber1)
   end
 
   def test_builtin_fiber_inherits_psyllium_fiber_class_methods
@@ -35,13 +35,13 @@ class TestPsyllium < Minitest::Test
   end
 
   def test_fiber_join_only_works_on_psyllium_fibers
-    afiber = Fiber.new do
+    fiber1 = Fiber.new do
       Fiber.yield
     end
 
-    afiber.resume
+    fiber1.resume
 
-    exc = assert_raises(Psyllium::Error) { afiber.join }
+    exc = assert_raises(Psyllium::Error) { fiber1.join }
     assert_match('No Psyllium state for this fiber', exc.message)
   end
 
@@ -158,26 +158,26 @@ class TestPsyllium < Minitest::Test
     # Need to run this under a non-blocking Fiber, otherwise joining won't work.
     Fiber.schedule do
       outer_limit = 0.1
-      afiber = ::Fiber.start(outer_limit) do |inner_limit|
+      fiber1 = ::Fiber.start(outer_limit) do |inner_limit|
         sleep(inner_limit)
         3
       end
-      bfiber = ::Fiber.start do
+      fiber2 = ::Fiber.start do
         sleep(outer_limit)
         4
       end
 
-      a_end_value = afiber.value
-      b_end_value = bfiber.value
+      end_value1 = fiber1.value
+      end_value2 = fiber2.value
 
-      assert_equal(3, a_end_value)
+      assert_equal(3, end_value1)
 
-      assert_equal(4, b_end_value)
+      assert_equal(4, end_value2)
 
-      assert_kind_of(::Psyllium::FiberInstanceMethods, afiber)
+      assert_kind_of(::Psyllium::FiberInstanceMethods, fiber1)
 
       # Join should return the fiber instance
-      assert_equal(afiber, afiber.join)
+      assert_equal(fiber1, fiber1.join)
     end
   end
 end
