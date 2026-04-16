@@ -45,7 +45,7 @@ module Psyllium
     # 3. The `start` method is also available on the `Thread` class, so this
     # makes it easy to change out one for the other.
     def start(*args, &block)
-      raise ArgumentError.new('No block given') unless block
+      ::Kernel.raise ArgumentError.new('No block given') unless block
 
       Fiber.schedule do
         state = state_get(create_missing: true)
@@ -81,7 +81,7 @@ module Psyllium
     # the original exception as its `cause`.
     def value
       join
-      raise ExceptionalCompletionError.new(state.exception) if state.exception
+      ::Kernel.raise ExceptionalCompletionError.new(state.exception) if state.exception
 
       state.value
     end
@@ -128,11 +128,11 @@ module Psyllium
     # `join` may be called more than once.
     def join(limit = nil) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/AbcSize
       return self if state.joined
-      raise Error.new('Cannot join self') if eql?(::Fiber.current)
-      raise Error.new('Cannot join when calling Fiber is blocking') if ::Fiber.current.blocking?
-      raise Error.new('Cannot join when called Fiber is blocking') if blocking?
-      raise Error.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
-      raise Error.new('Cannot join unstarted Fiber') unless state.started
+      ::Kernel.raise Error.new('Cannot join self') if eql?(::Fiber.current)
+      ::Kernel.raise Error.new('Cannot join when calling Fiber is blocking') if ::Fiber.current.blocking?
+      ::Kernel.raise Error.new('Cannot join when called Fiber is blocking') if blocking?
+      ::Kernel.raise Error.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
+      ::Kernel.raise Error.new('Cannot join unstarted Fiber') unless state.started
 
       # Once this mutex finishes synchronizing, that means the initial
       # calculation is done and we can return `self`, which is the Fiber
@@ -147,7 +147,7 @@ module Psyllium
 
     def state(suppress_error: false)
       fiber_state = self.class.state_get(fiber: self)
-      raise Error.new('No Psyllium state for this fiber') unless fiber_state || suppress_error
+      ::Kernel.raise Error.new('No Psyllium state for this fiber') unless fiber_state || suppress_error
 
       fiber_state
     end
