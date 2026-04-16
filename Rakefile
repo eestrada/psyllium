@@ -12,6 +12,8 @@ Minitest::TestTask.create(:coverage) do |t|
   # simplecov can be configured inside the `test/test_helper.rb` file, but it
   # needs to be required before minitest, otherwise it's at_exit hook won't be
   # registered in the correct order, which will cause coverage to be missed.
+  #
+  # Run `rake test:cmd` and `rake coverage:cmd` to see the difference.
   t.test_prelude = 'require "simplecov"'
 end
 
