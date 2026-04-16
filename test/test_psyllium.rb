@@ -69,6 +69,49 @@ class TestPsyllium < Minitest::Test
     assert_equal(kill_method, exit_method)
   end
 
+  def test_status_run
+    Fiber.schedule do
+      assert_equal('run', Fiber.current.status)
+    end
+  end
+
+  def test_status_sleep
+    Fiber.schedule do
+      not_current_fiber = ::Fiber.start { sleep(0.1) }
+
+      assert_equal('sleep', not_current_fiber.status)
+    end
+  end
+
+  def test_status_complete_exceptional
+    Fiber.schedule do
+      not_current_fiber = ::Fiber.start do
+        # FIXME: if a Psyllium fiber doesn't have a blocking operation like
+        # `sleep`, then the start method runs the proc to completion and
+        # returns nil. It should always return a fiber, even if it has already
+        # completed its run.
+        sleep(0.01)
+        raise 'Any exception'
+      end
+
+      not_current_fiber.join
+
+      assert_nil(not_current_fiber.status)
+    end
+  end
+
+  def test_status_complete_normal
+    Fiber.schedule do
+      not_current_fiber = ::Fiber.start { sleep(0.01) }
+
+      refute_nil(not_current_fiber)
+
+      not_current_fiber.join
+
+      assert_equal(false, not_current_fiber.status) # rubocop:disable Minitest/RefuteFalse
+    end
+  end
+
   def test_join_works
     # Need to run this under a non-blocking Fiber, otherwise joining won't work.
     Fiber.schedule do
