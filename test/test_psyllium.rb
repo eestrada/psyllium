@@ -1,18 +1,21 @@
 # frozen_string_literal: true
 
-require 'async'
 require_relative 'test_helper'
+
+require 'async'
+require_relative '../lib/psyllium'
 
 class TestPsyllium < Minitest::Test
   def setup
     super
-    scheduler = Async::Scheduler.new
-    Fiber.set_scheduler(scheduler)
+    @scheduler = Async::Scheduler.new
+    Fiber.set_scheduler(@scheduler)
   end
 
   def teardown
     super
     Fiber.set_scheduler(nil)
+    @scheduler = nil
   end
 
   def test_that_it_has_a_version_number

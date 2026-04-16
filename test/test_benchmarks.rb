@@ -1,19 +1,22 @@
 # frozen_string_literal: true
 
-require 'async'
-require 'minitest/benchmark'
 require_relative 'test_helper'
+
+require 'minitest/benchmark'
+require 'async'
+require_relative '../lib/psyllium'
 
 class BenchPsyllium < Minitest::Benchmark
   def setup
     super
-    scheduler = Async::Scheduler.new
-    Fiber.set_scheduler(scheduler)
+    @scheduler = Async::Scheduler.new
+    Fiber.set_scheduler(@scheduler)
   end
 
   def teardown
     super
     Fiber.set_scheduler(nil)
+    @scheduler = nil
   end
 
   # At its peak, `n` for this benchmark is equal to 10000. Each Fiber created

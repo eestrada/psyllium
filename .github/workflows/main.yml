@@ -21,8 +21,10 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Run the default task
-        run: bundle exec rake
+      - name: Run rubocop
+        run: bundle exec rake rubocop
+      - name: Run coverage
+        run: bundle exec rake coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
