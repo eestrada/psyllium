@@ -77,15 +77,15 @@ class TestPsyllium < Minitest::Test
 
   def test_status_sleep
     Fiber.schedule do
-      not_current_fiber = ::Fiber.start { sleep(0.1) }
+      fiber1 = ::Fiber.start { sleep(0.1) }
 
-      assert_equal('sleep', not_current_fiber.status)
+      assert_equal('sleep', fiber1.status)
     end
   end
 
-  def test_status_complete_exceptional
+  def test_status_complete_exceptional1
     Fiber.schedule do
-      not_current_fiber = ::Fiber.start do
+      fiber1 = ::Fiber.start do
         # FIXME: if a Psyllium fiber doesn't have a blocking operation like
         # `sleep`, then the start method runs the proc to completion and
         # returns nil. It should always return a fiber, even if it has already
@@ -94,21 +94,63 @@ class TestPsyllium < Minitest::Test
         raise 'Any exception'
       end
 
-      not_current_fiber.join
+      fiber1.join
 
-      assert_nil(not_current_fiber.status)
+      assert_nil(fiber1.status)
     end
+  end
+
+  # Non-psyllium fibers should still work correctly with status, even if they
+  # have no `state` for checking for exceptions.
+  def test_status_complete_exceptional2
+    fiber1 = Fiber.new do
+      assert_equal('run', Fiber.current.status)
+      Fiber.yield
+    end
+
+    assert_equal('sleep', fiber1.status)
+
+    fiber1.resume
+
+    assert_equal('sleep', fiber1.status)
+
+    fiber1.resume
+
+    assert_equal(false, fiber1.status) # rubocop:disable Minitest/RefuteFalse
   end
 
   def test_status_complete_normal
     Fiber.schedule do
-      not_current_fiber = ::Fiber.start { sleep(0.01) }
+      fiber1 = ::Fiber.start { sleep(0.01) }
 
-      refute_nil(not_current_fiber)
+      refute_nil(fiber1)
 
-      not_current_fiber.join
+      fiber1.join
 
-      assert_equal(false, not_current_fiber.status) # rubocop:disable Minitest/RefuteFalse
+      assert_equal(false, fiber1.status) # rubocop:disable Minitest/RefuteFalse
+    end
+  end
+
+  def test_stop_with_sleep
+    Fiber.schedule do
+      fiber1 = ::Fiber.start { sleep(0.01) }
+
+      assert_equal('sleep', fiber1.status)
+      assert_predicate(fiber1, :alive?)
+
+      assert_predicate(fiber1, :stop?)
+    end
+  end
+
+  def test_stop_with_completed
+    Fiber.schedule do
+      fiber1 = ::Fiber.start { sleep(0.01) }
+      fiber1.join
+
+      assert_equal(false, fiber1.status) # rubocop:disable Minitest/RefuteFalse
+      refute_predicate(fiber1, :alive?)
+
+      assert_predicate(fiber1, :stop?)
     end
   end
 
