@@ -37,26 +37,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     assert_kind_of(::Psyllium::FiberClassMethods, ::Fiber)
   end
 
-  def test_fiber_join_only_works_on_psyllium_fibers
-    fiber1 = Fiber.new do
-      Fiber.yield
-    end
-
-    fiber1.resume
-
-    exc = assert_raises(Psyllium::Error) { fiber1.join }
-    assert_match('No Psyllium state for this fiber', exc.message)
-  end
-
-  def test_fiber_cannot_join_self
-    Fiber.start do
-      exc = assert_raises(Psyllium::Error) do
-        Fiber.current.join
-      end
-      assert_match('Cannot join self', exc.message)
-    end
-  end
-
   def test_kill_method_is_aliased
     fiber_methods = ::Fiber.instance_methods
 
@@ -209,7 +189,7 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     end
   end
 
-  def test_timeout_works
+  def test_join_timeout_works
     # Need to run this under a non-blocking Fiber, otherwise joining won't work.
     Fiber.schedule do
       fiber1 = ::Fiber.start do
@@ -223,6 +203,54 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
       timeout_value2 = fiber1.join(0.15)
 
       refute_nil(timeout_value2)
+    end
+  end
+
+  def test_fiber_cannot_join_self
+    Fiber.start do
+      exc = assert_raises(Psyllium::Error) do
+        Fiber.current.join
+      end
+      assert_match('Cannot join self', exc.message)
+    end
+  end
+
+  def test_join_fails_on_blocking_parent_fiber
+    Fiber.blocking do
+      fiber1 = Fiber.new { sleep(0) }
+
+      err = assert_raises(Psyllium::Error) { fiber1.join }
+      assert_equal('Cannot join when current Fiber is blocking', err.message)
+    end
+
+  end
+
+  def test_join_fails_on_blocking_self_fiber
+    Fiber.schedule do
+      fiber1 = ::Fiber.new(blocking: true) { sleep(0.1) }
+
+      err = assert_raises(Psyllium::Error) { fiber1.join }
+      assert_equal('Cannot join when called Fiber is blocking', err.message)
+    end
+  end
+
+  def test_join_fails_on_scheduler_not_set
+    Fiber.set_scheduler(nil)
+
+    fiber1 = Fiber.new { sleep(0) }
+
+    err = assert_raises(Psyllium::Error) { fiber1.join }
+    assert_equal('Cannot join without Fiber scheduler set', err.message)
+  end
+
+  # Lack of psyllium state also means the Fiber hasn't been started yet, since
+  # psyllium always creates the state immeditally upon creating a Fiber.
+  def test_fiber_join_only_works_on_psyllium_fibers
+    Fiber.schedule do
+      fiber1 = ::Fiber.new { sleep(0.1) }
+
+      exc = assert_raises(Psyllium::Error) { fiber1.join }
+      assert_match('No Psyllium state for this fiber', exc.message)
     end
   end
 end
