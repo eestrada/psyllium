@@ -67,6 +67,25 @@ Circumstances where you shouldn't use Psyllium (or Fibers generally):
    and release the GVL when doing so (i.e. truly parallel code execution).
 2. If you don't have concurrent code at all (i.e. the code must run serially).
 
+## Is there any proof this actually works?
+
+Although it is just a toy metric, [internal
+benchmarking](test/test_benchmarks.rb) shows that even with tens of thousands
+of sleeping Fibers, Psyllium achieves roughly Big O constant performance. This
+is thanks to [the excellent Async Fiber
+scheduler](https://github.com/socketry/async) it uses for the test suite.
+
+YMMV in real world performance improvements (i.e. usage patterns are much more
+varied in the real world).
+
+## What's next
+
+Currently a Mutex is created per Fiber. I'd like to find some way to reduce or
+remove that.
+
+It would be ideal to override the `new` method on the class so that all Fibers
+could be psyllium compatible.
+
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:
@@ -86,8 +105,8 @@ gem install psyllium
 Instead of doing the following in your code:
 
 ```ruby
-thread1 = Thread.start { long_running_io_operation_with_result1() }
-thread2 = Thread.start { long_running_io_operation_with_result2() }
+thread1 = Thread.start { long_running_io_operation_with_result() }
+thread2 = Thread.start { long_running_io_operation_with_error() }
 
 thread1.join
 thread2.join
@@ -98,6 +117,8 @@ puts 'thread2 ended without an exception' if thread2.status == false
 # `value` implicitly calls `join`, so the explicit `join` calls above are
 # not strictly necessary.
 result1 = thread1.value
+
+# This will raise an exception.
 result2 = thread2.value
 ```
 
@@ -115,8 +136,8 @@ Fiber.set_scheduler(SomeSchedulerImplementation.new)
 # If you use a Fiber based web server like Falcon,
 # then all your code already runs in a non-blocking Fiber.
 Fiber.schedule do
-  fiber1 = Fiber.start { long_running_io_operation_with_result1() }
-  fiber2 = Fiber.start { long_running_io_operation_with_result2() }
+  fiber1 = Fiber.start { long_running_io_operation_with_result() }
+  fiber2 = Fiber.start { long_running_io_operation_with_error() }
 
   fiber1.join
   fiber2.join
@@ -127,6 +148,8 @@ Fiber.schedule do
   # `value` implicitly calls `join`, so the explicit `join` calls above are
   # not strictly necessary.
   result1 = fiber1.value
+
+  # This will raise an exception, just like Thread does.
   result2 = fiber2.value
 end
 ```
