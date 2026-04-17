@@ -126,7 +126,7 @@ module Psyllium
     # reached, returns `nil` instead.
     #
     # `join` may be called more than once.
-    def join(limit = nil) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/AbcSize
+    def join(limit = nil) # rubocop:disable Metrics/AbcSize
       ::Kernel.raise Error.new('Cannot join self') if eql?(::Fiber.current)
       ::Kernel.raise Error.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
       ::Kernel.raise Error.new('Cannot join when current Fiber is blocking') if ::Fiber.current.blocking?

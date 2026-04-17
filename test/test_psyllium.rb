@@ -222,7 +222,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
       err = assert_raises(Psyllium::Error) { fiber1.join }
       assert_equal('Cannot join when current Fiber is blocking', err.message)
     end
-
   end
 
   def test_join_fails_on_blocking_self_fiber
