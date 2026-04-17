@@ -21,6 +21,11 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     @scheduler = nil
   end
 
+  def test_modules_prepended
+    assert_equal(::Psyllium::FiberClassMethods, ::Fiber.singleton_class.ancestors.first)
+    assert_equal(::Psyllium::FiberInstanceMethods, ::Fiber.new {}.class.ancestors.first) # rubocop:disable Lint/EmptyBlock
+  end
+
   def test_that_it_has_a_version_number
     refute_nil ::Psyllium::VERSION
   end
@@ -52,6 +57,13 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     assert_equal(kill_method, exit_method)
   end
 
+  def test_overridden_new_without_block
+    Fiber.schedule do
+      err = assert_raises(ArgumentError) { Fiber.new }
+      assert_equal('No block given', err.message)
+    end
+  end
+
   def test_start_without_block
     Fiber.schedule do
       err = assert_raises(ArgumentError) { Fiber.start }
@@ -62,11 +74,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
   def test_status_exceptional_completion
     Fiber.schedule do
       fiber1 = ::Fiber.start do
-        # FIXME: if a Psyllium fiber doesn't have a blocking operation like
-        # `sleep`, then the start method runs the proc to completion and
-        # returns nil. It should always return a fiber, even if it has already
-        # completed its run.
-        sleep(0.01)
         raise TestException.new('Test exception message')
       end
 
@@ -85,7 +92,7 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
 
   def test_status_sleep
     Fiber.schedule do
-      fiber1 = ::Fiber.start { sleep(0.1) }
+      fiber1 = ::Fiber.start { sleep(0.01) }
 
       assert_equal('sleep', fiber1.status)
     end
@@ -94,11 +101,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
   def test_status_complete_exceptional1
     Fiber.schedule do
       fiber1 = ::Fiber.start do
-        # FIXME: if a Psyllium fiber doesn't have a blocking operation like
-        # `sleep`, then the start method runs the proc to completion and
-        # returns nil. It should always return a fiber, even if it has already
-        # completed its run.
-        sleep(0.01)
         raise 'Any exception'
       end
 
@@ -108,8 +110,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     end
   end
 
-  # Non-psyllium fibers should still work correctly with status, even if they
-  # have no `state` for checking for exceptions.
   def test_status_complete_exceptional2
     fiber1 = Fiber.new do
       assert_equal('run', Fiber.current.status)
@@ -242,14 +242,12 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     assert_equal('Cannot join without Fiber scheduler set', err.message)
   end
 
-  # Lack of psyllium state also means the Fiber hasn't been started yet, since
-  # psyllium always creates the state immeditally upon creating a Fiber.
-  def test_fiber_join_only_works_on_psyllium_fibers
+  def test_fiber_join_only_works_on_started_fibers
     Fiber.schedule do
-      fiber1 = ::Fiber.new { sleep(0.1) }
+      fiber1 = ::Fiber.new { sleep(0.01) }
 
       exc = assert_raises(Psyllium::Error) { fiber1.join }
-      assert_match('No Psyllium state for this fiber', exc.message)
+      assert_match('Cannot join when Fiber has not started', exc.message)
     end
   end
 end

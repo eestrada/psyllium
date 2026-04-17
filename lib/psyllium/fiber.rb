@@ -22,6 +22,23 @@ module Psyllium
 
   # Meant to be used with `extend` on Fiber class.
   module FiberClassMethods
+    def new(*args, **kwargs, &block)
+      ::Kernel.raise ArgumentError.new('No block given') unless block
+
+      super(*args, **kwargs) do # rubocop:disable Style/SuperArguments
+        state = state_get
+        state.mutex.synchronize do
+          state.started = true
+          state.value = block.call
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          state.exception = e
+          raise
+        ensure
+          state.joined = true
+        end
+      end
+    end
+
     # A new method is used to create Psyllium Fibers for several reasons:
     #
     # 1. This ensures that existing behavior for Fibers is not changed.
@@ -32,23 +49,22 @@ module Psyllium
     #
     # 3. The `start` method is also available on the `Thread` class, so this
     # makes it easy to change out one for the other.
-    def start(*args, &block)
-      ::Kernel.raise ArgumentError.new('No block given') unless block
+    def start(*args, &start_block)
+      ::Kernel.raise ArgumentError.new('No block given') unless start_block
 
-      Fiber.schedule do
-        state = state_get(create_missing: true)
-        state.mutex.synchronize do
-          state.started = true
-          state.value = block.call(*args)
-        rescue StandardError => e
-          state.exception = e
-        ensure
-          state.joined = true
+      outer_ref = nil
+      ::Fiber.schedule do
+        outer_ref = ::Fiber.new(blocking: false) { start_block.call(*args) }
+        outer_ref.tap do |f|
+          f.resume
+        rescue Exception # rubocop:disable Lint/RescueException
+          # Forcefully suppress all exceptions to behave more like Thread.start
         end
       end
+      outer_ref
     end
 
-    def state_get(fiber: Fiber.current, create_missing: false)
+    def state_get(fiber: Fiber.current)
       # Psyllium state is a thread local variable because Fibers cannot (yet)
       # migrate across threads anyway.
       #
@@ -57,7 +73,7 @@ module Psyllium
       state = Thread.current.thread_variable_get(:psyllium_state) || Thread.current.thread_variable_set(
         :psyllium_state, ObjectSpace::WeakKeyMap.new
       )
-      create_missing ? (state[fiber] ||= State.new) : state[fiber]
+      state[fiber] ||= State.new
     end
   end
 
@@ -95,7 +111,7 @@ module Psyllium
         'run'
       elsif alive?
         'sleep'
-      elsif state(suppress_error: true)&.exception
+      elsif state.exception
         nil
       else
         false
@@ -113,11 +129,12 @@ module Psyllium
     # reached, returns `nil` instead.
     #
     # `join` may be called more than once.
-    def join(limit = nil) # rubocop:disable Metrics/AbcSize
+    def join(limit = nil) # rubocop:disable Metrics/AbcSize,Metrics/CyclomaticComplexity
       ::Kernel.raise Error.new('Cannot join self') if eql?(::Fiber.current)
       ::Kernel.raise Error.new('Cannot join without Fiber scheduler set') unless ::Fiber.scheduler
       ::Kernel.raise Error.new('Cannot join when current Fiber is blocking') if ::Fiber.current.blocking?
       ::Kernel.raise Error.new('Cannot join when called Fiber is blocking') if blocking?
+      ::Kernel.raise Error.new('Cannot join when Fiber has not started') unless state.started
       return self if state.joined
 
       # Once this mutex finishes synchronizing, that means the initial
@@ -131,18 +148,18 @@ module Psyllium
 
     private
 
-    def state(suppress_error: false)
-      fiber_state = self.class.state_get(fiber: self)
-      ::Kernel.raise Error.new('No Psyllium state for this fiber') unless fiber_state || suppress_error
-
-      fiber_state
+    def state
+      self.class.state_get(fiber: self)
     end
   end
 end
 
 class ::Fiber # rubocop:disable Style/Documentation,Style/OneClassPerFile
-  extend ::Psyllium::FiberClassMethods
-  include ::Psyllium::FiberInstanceMethods
+  class << self
+    prepend ::Psyllium::FiberClassMethods
+  end
+
+  prepend ::Psyllium::FiberInstanceMethods
 
   # Thread has the same aliases
   alias terminate kill
