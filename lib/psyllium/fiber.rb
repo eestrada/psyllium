@@ -6,18 +6,6 @@ module Psyllium
   # Base Exception class for module code.
   class Error < FiberError; end
 
-  # Wrap Exception instances for propagation
-  class ExceptionalCompletionError < Error
-    def initialize(expt)
-      @internal_exception = expt
-      super(@internal_exception)
-    end
-
-    def cause
-      @internal_exception
-    end
-  end
-
   # Holds per-Fiber state for Psyllium operations.
   class State
     attr_reader :mutex
@@ -77,11 +65,10 @@ module Psyllium
   # in a more Thread-like manner.
   module FiberInstanceMethods
     # Waits for Fiber to complete, using join, and returns its value. If Fiber
-    # completed with an exception, raises `ExceptionalCompletionError`, with
-    # the original exception as its `cause`.
+    # completed with an exception, re-raises the original exception.
     def value
       join
-      ::Kernel.raise ExceptionalCompletionError.new(state.exception) if state.exception
+      ::Kernel.raise state.exception if state.exception
 
       state.value
     end

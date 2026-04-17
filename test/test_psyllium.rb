@@ -67,13 +67,13 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
         # returns nil. It should always return a fiber, even if it has already
         # completed its run.
         sleep(0.01)
-        raise TestException.new('Any exception')
+        raise TestException.new('Test exception message')
       end
 
       fiber1.join
 
-      err = assert_raises(Psyllium::ExceptionalCompletionError) { fiber1.value }
-      assert_instance_of(TestException, err.cause)
+      err = assert_raises(TestException) { fiber1.value }
+      assert_equal('Test exception message', err.message)
     end
   end
 
