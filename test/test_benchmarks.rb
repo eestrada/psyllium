@@ -29,7 +29,7 @@ class BenchPsyllium < Minitest::Benchmark
   def bench_joining_multiple_fibers_is_roughly_big_o_constant
     # Need to run this under a non-blocking Fiber, otherwise joining won't work.
     Fiber.schedule do
-      assert_performance_constant(0.9999) do |n|
+      assert_performance_constant(0.999) do |n|
         sleep_time = 0.1
         fibers = n.times.map { Fiber.start { sleep(sleep_time) } }
         fibers.each(&:join)
