@@ -71,16 +71,51 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     end
   end
 
-  def test_status_exceptional_completion
+  def test_status_exceptional_completion1
     Fiber.schedule do
       fiber1 = ::Fiber.start do
         raise TestException.new('Test exception message')
       end
 
+      refute_nil(fiber1)
+
       fiber1.join
 
       err = assert_raises(TestException) { fiber1.value }
       assert_equal('Test exception message', err.message)
+    end
+  end
+
+  # This should be failing and it isn't
+  def test_status_exceptional_completion2 # rubocop:disable Metrics/AbcSize
+    Fiber.schedule do
+      fiber1 = ::Fiber.new do
+        ::Fiber.yield
+        raise TestException.new('Test exception message2')
+      end
+
+      assert_equal('sleep', fiber1.status)
+      fiber1.resume
+
+      assert_equal('sleep', fiber1.status)
+
+      err0 = assert_raises(Psyllium::Error) { fiber1.join }
+      assert_equal('Cannot join unless started via Fiber.schedule', err0.message)
+
+      # Joining here causing the fiber scheduler to stall indefinitely
+      err1 = assert_raises(TestException) { fiber1.resume }
+      assert_equal('Test exception message2', err1.message)
+
+      err2 = assert_raises(FiberError) { fiber1.resume }
+      assert_equal('attempt to resume a terminated fiber', err2.message)
+
+      # After a Fiber has completed, there is no reason to disallow it from
+      # joining, even if it wasn't started via Fiber.schedule.
+      #
+      # This allows even blocking or non-scheduled fibers to still benefit from
+      # the state tracking of Psyllium.
+      err3 = assert_raises(TestException) { fiber1.value }
+      assert_equal('Test exception message2', err3.message)
     end
   end
 
@@ -103,6 +138,8 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
       fiber1 = ::Fiber.start do
         raise 'Any exception'
       end
+
+      refute_nil(fiber1)
 
       fiber1.join
 
