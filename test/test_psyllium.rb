@@ -86,7 +86,8 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
     end
   end
 
-  # This should be failing and it isn't
+  # FIXME: there is like 2-3 different behaviors being tested in this test and
+  # it should be split up.
   def test_status_exceptional_completion2 # rubocop:disable Metrics/AbcSize
     Fiber.schedule do
       fiber1 = ::Fiber.new do
@@ -102,7 +103,6 @@ class TestPsyllium < Minitest::Test # rubocop:disable Metrics/ClassLength
       err0 = assert_raises(Psyllium::Error) { fiber1.join }
       assert_equal('Cannot join unless started via Fiber.schedule', err0.message)
 
-      # Joining here causing the fiber scheduler to stall indefinitely
       err1 = assert_raises(TestException) { fiber1.resume }
       assert_equal('Test exception message2', err1.message)
 
